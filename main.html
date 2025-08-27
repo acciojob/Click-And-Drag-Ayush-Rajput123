@@ -1,42 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Click and Drag</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <title>DRAG</title>
 </head>
 <body>
-  <div class="items">
-    <div class="item item1">01</div>
-    <div class="item item2">02</div>
-    <div class="item item3">03</div>
-    <div class="item item4">04</div>
-    <div class="item item5">05</div>
-    <div class="item item6">06</div>
-    <div class="item item7">07</div>
-    <div class="item item8">08</div>
-    <div class="item item9">09</div>
-    <div class="item item10">10</div>
-    <div class="item item11">11</div>
-    <div class="item item12">12</div>
-    <div class="item item13">13</div>
-    <div class="item item14">14</div>
-    <div class="item item15">15</div>
-    <div class="item item16">16</div>
-    <div class="item item17">17</div>
-    <div class="item item18">18</div>
-    <div class="item item19">19</div>
-    <div class="item item20">20</div>
-    <div class="item item21">21</div>
-    <div class="item item22">22</div>
-    <div class="item item23">23</div>
-    <div class="item item24">24</div>
-    <div class="item item25">25</div>
+  <div class="container" id="container">
+    <div class="grid" id="grid">
+      <div class="cube">01</div>
+      <div class="cube">02</div>
+      <div class="cube">03</div>
+      <div class="cube">04</div>
+      <div class="cube">05</div>
+      <div class="cube">06</div>
+      <div class="cube">07</div>
+      <div class="cube">08</div>
+      <div class="cube">09</div>
+      <div class="cube">10</div>
+      <div class="cube">11</div>
+      <div class="cube">12</div>
+      <div class="cube">13</div>
+      <div class="cube">14</div>
+      <div class="cube">15</div>
+      <div class="cube">16</div>
+      <div class="cube">17</div>
+      <div class="cube">18</div>
+      <div class="cube">19</div>
+      <div class="cube">20</div>
+      <div class="cube">21</div>
+      <div class="cube">22</div>
+      <div class="cube">23</div>
+      <div class="cube">24</div>
+      <div class="cube">25</div>
+    </div>
+
+    <div class="hint">Click + drag tiles. Release outside → snaps back.</div>
   </div>
 
 <script>
-//Your code goes here 
+(function () {
+  const container = document.getElementById('container');
+  const grid = document.getElementById('grid');
+  const cubes = Array.from(grid.querySelectorAll('.cube'));
+
+  // configuration
+  const CLICK_THRESHOLD = 5;      // px to differentiate click vs drag
+  const SNAP_BACK_DURATION = 200; // ms
+  let containerRect = null;
+
+  // store original positions
+  const meta = new WeakMap();
+
+  // 1) convert grid to absolute positions but visually keep same layout
+  function initPositions() {
+    containerRect = container.getBoundingClientRect();
+
+    // for each cube: compute position relative to container
+    cubes.forEach(cube => {
+      const r = cube.getBoundingClientRect();
+
+      // compute offsets relative to container's content box (padding included)
+      const left = r.left - containerRect.left;
+      const top  = r.top - containerRect.top;
+
+      // set fixed size to keep it stable
+      cube.style.width = r.width + 'px';
+      cube.style.height = r.height + 'px';
+
+      // move node from grid to container (so absolute coordinates use container)
+      // but to preserve visual flow we keep grid initially and then set absolute
+      // We'll set the cube to position:absolute and append to container.
+      cube.style.position = 'absolute';
+      cube.style.left = left + 'px';
+      cube.style.top = top + 'px';
+      cube.style.transition = 'left 0.12s ease, top 0.12s ease, transform 140ms ease';
+
+      // record original location (for snapping back)
+      meta.set(cube, {
+        originalLeft: left,
+        originalTop: top
+      });
+
+      // append cube to container (now overlaying where it used to be)
+      container.appendChild(cube);
+    });
+
+    // hide the grid wrapper (it was only a layout helper)
+    grid.style.display = 'none';
+  }
+
+  // clamp a left/top so the element stays inside container
+  function clampPosition(left, top, el) {
+    const elW = el.offsetWidth;
+    const elH = el.offsetHeight;
+
+    const maxLeft = container.clientWidth - elW;
+    const maxTop  = container.clientHeight - elH;
+
+    const clampedLeft = Math.min(Math.max(0, left), Math.max(0, maxLeft));
+    const clampedTop  = Math.min(Math.max(0, top), Math.max(0, maxTop));
+
+    return [clampedLeft, clampedTop];
+  }
+
+  // check if an (x,y) client coordinate is inside the container rect
+  function isPointInsideContainer(clientX, clientY) {
+    const rect = container.getBoundingClientRect();
+    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+  }
+
+  // dragging state
+  let active = null; // { el, startMouseX, startMouseY, startLeft, startTop, moved }
+  function onMouseDown(e) {
+    if (e.button !== 0) return; // only left button
+    const el = e.currentTarget;
+
+    e.preventDefault();
+
+    containerRect = container.getBoundingClientRect();
+
+    const startMouseX = e.clientX;
+    const startMouseY = e.clientY;
+
+    const startLeft = parseFloat(el.style.left) || 0;
+    const startTop  = parseFloat(el.style.top)  || 0;
+
+    active = {
+      el,
+      startMouseX,
+      startMouseY,
+      startLeft,
+      startTop,
+      moved: false
+    };
+
+    // bring to top and disable transition while dragging
+    el.style.transition = 'none';
+    el.style.zIndex = 1000;
+    el.classList.add('dragging');
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+
+  // main mousemove handler (throttled via requestAnimationFrame)
+  let rafId = null;
+  function onMouseMove(e) {
+    if (!active) return;
+    e.preventDefault();
+
+    const dx = e.clientX - active.startMouseX;
+    const dy = e.clientY - active.startMouseY;
+
+    // if moved beyond threshold, mark as moved
+    if (!active.moved && (Math.abs(dx) > CLICK_THRESHOLD || Math.abs(dy) > CLICK_THRESHOLD)) {
+      active.moved = true;
+    }
+
+    // compute new desired position
+    const desiredLeft = active.startLeft + dx;
+    const desiredTop  = active.startTop + dy;
+
+    // clamp inside container (so cube never visually leaves)
+    const [clampedLeft, clampedTop] = clampPosition(desiredLeft, desiredTop, active.el);
+
+    // use RAF to update style for smoothness
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(() => {
+      active.el.style.left = clampedLeft + 'px';
+      active.el.style.top  = clampedTop + 'px';
+    });
+  }
+
+  function onMouseUp(e) {
+    if (!active) return;
+
+    // restore transition so the final position animates
+    active.el.style.transition = `left ${SNAP_BACK_DURATION}ms ease, top ${SNAP_BACK_DURATION}ms ease, transform 140ms ease`;
+
+    // detect whether mouse release happened inside container
+    const inside = isPointInsideContainer(e.clientX, e.clientY);
+
+    if (!active.moved) {
+      // click without drag - do nothing
+      // just restore visual state
+      active.el.classList.remove('dragging');
+      active.el.style.zIndex = '';
+      active = null;
+    } else {
+      // was dragged: if released outside container -> snap back to original position
+      if (!inside) {
+        const info = meta.get(active.el);
+        // animate back to original coordinates
+        active.el.style.left = info.originalLeft + 'px';
+        active.el.style.top  = info.originalTop  + 'px';
+      } else {
+        // released inside: leave it where it is (already clamped while dragging)
+        // We might want to update the "original" position to the new one so
+        // future outside-drops snap back to the new spot:
+        meta.set(active.el, {
+          originalLeft: parseFloat(active.el.style.left),
+          originalTop:  parseFloat(active.el.style.top)
+        });
+      }
+
+      // cleanup after small delay to allow transition to complete visually
+      setTimeout(() => {
+        if (active && active.el) {
+          active.el.classList.remove('dragging');
+          active.el.style.zIndex = '';
+        }
+      }, SNAP_BACK_DURATION + 20);
+
+      active = null;
+    }
+
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+
+  // initialize
+  initPositions();
+
+  // attach mousedown to each cube
+  cubes.forEach(cube => {
+    cube.addEventListener('mousedown', onMouseDown);
+    // optional: support touch
+    cube.addEventListener('touchstart', (ev) => {
+      const touch = ev.touches[0];
+      // synthesize mouse down
+      onMouseDown({
+        button: 0,
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        preventDefault: () => ev.preventDefault(),
+        currentTarget: ev.currentTarget
+      });
+    }, { passive: false });
+  });
+
+  // on window resize reinitialize positions to keep layout sane
+  window.addEventListener('resize', () => {
+    // recalc container rect and re-place cubes at their stored original positions
+    containerRect = container.getBoundingClientRect();
+    cubes.forEach(cube => {
+      const m = meta.get(cube);
+      if (m) {
+        // keep current position if element was moved previously, else original
+        const left = (typeof m.originalLeft === 'number') ? m.originalLeft : parseFloat(cube.style.left) || 0;
+        const top  = (typeof m.originalTop  === 'number') ? m.originalTop  : parseFloat(cube.style.top) || 0;
+        cube.style.left = left + 'px';
+        cube.style.top  = top + 'px';
+      }
+    });
+  });
+})();
 </script>
 
-  </body>
+</body>
 </html>
