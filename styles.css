@@ -15,7 +15,7 @@
     }
 
     /* Defined area (container) */
-    .container {
+    .items {
       width: calc((var(--cube-size) * var(--cols)) + (var(--gap) * (var(--cols) - 1)) + 40px);
       height: calc((var(--cube-size) * 5) + (var(--gap) * 4) + 40px); /* 5 rows visible */
       padding: 20px;
