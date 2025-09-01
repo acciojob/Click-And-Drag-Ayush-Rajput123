@@ -25,14 +25,14 @@
       border-radius: 8px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.6);
       position: relative; /* children will be absolutely positioned after init */
-      overflow: hidden;    /* prevents any visual overflow */
+      overflow: auto;    
       user-select: none;
     }
 
     /* initial grid layout used only until JS converts cubes to absolute positions */
     .grid {
       display: grid;
-      grid-template-columns: repeat(var(--cols), var(--cube-size));
+      grid-template-columns: repeat(20, var(--cube-size));
       grid-auto-rows: var(--cube-size);
       gap: var(--gap);
       width: 100%;
