@@ -2,11 +2,75 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>DRAG</title>
+  <title>Scrollable Drag Test</title>
+  <style>
+    :root {
+      --cube-size: 100px;
+      --gap: 12px;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #111;
+      font-family: system-ui, Arial, sans-serif;
+    }
+
+    /* Scrollable container */
+    .items {
+      width: 620px;
+      height: 560px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      overflow-x: auto;
+      overflow-y: hidden;
+      cursor: grab;
+      user-select: none;
+    }
+
+    /* Wide grid so it overflows horizontally */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(25, var(--cube-size));
+      grid-auto-rows: var(--cube-size);
+      gap: var(--gap);
+      padding: 20px;
+    }
+
+    .cube {
+      width: var(--cube-size);
+      height: var(--cube-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 22px;
+      color: rgba(255,255,255,0.95);
+      border-radius: 6px;
+      cursor: inherit;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.45);
+      transition: transform 140ms ease, box-shadow 140ms ease;
+    }
+
+    .cube:nth-child(6n+1) { background:#ff6b6b; }
+    .cube:nth-child(6n+2) { background:#ffd93d; }
+    .cube:nth-child(6n+3) { background:#6bcb77; }
+    .cube:nth-child(6n+4) { background:#4d96ff; }
+    .cube:nth-child(6n+5) { background:#b36bff; }
+    .cube:nth-child(6n+6) { background:#ff8da1; }
+
+    .items.dragging {
+      cursor: grabbing;
+    }
+  </style>
 </head>
 <body>
   <div class="items" id="container">
-    <div class="grid" id="grid">
+    <div class="grid">
       <div class="cube">01</div>
       <div class="cube">02</div>
       <div class="cube">03</div>
@@ -32,174 +96,40 @@
       <div class="cube">23</div>
       <div class="cube">24</div>
       <div class="cube">25</div>
-	</div>
+    </div>
   </div>
 
-<script>
-(function () {
-  const container = document.getElementById('container');
-  const grid = document.getElementById('grid');
-  const cubes = Array.from(grid.querySelectorAll('.cube'));
+  <script>
+    const container = document.getElementById('container');
 
-  const CLICK_THRESHOLD = 5;
-  const SNAP_BACK_DURATION = 200;
+    let isDown = false;
+    let startX;
+    let scrollLeft;
 
-  const cellW = cubes[0].offsetWidth;
-  const cellH = cubes[0].offsetHeight;
-
-  let containerRect = null;
-  const meta = new WeakMap(); // stores each cube’s grid position (row, col)
-
-  function initPositions() {
-    containerRect = container.getBoundingClientRect();
-
-    cubes.forEach((cube, idx) => {
-      const row = Math.floor(idx / 5); // assuming 5 columns
-      const col = idx % 5;
-      const left = col * cellW;
-      const top  = row * cellH;
-
-      cube.style.width = cellW + 'px';
-      cube.style.height = cellH + 'px';
-      cube.style.position = 'absolute';
-      cube.style.left = left + 'px';
-      cube.style.top = top + 'px';
-      cube.style.transition = 'left 0.12s ease, top 0.12s ease, transform 140ms ease';
-
-      meta.set(cube, { row, col });
-      container.appendChild(cube);
+    container.addEventListener('mousedown', (e) => {
+      isDown = true;
+      container.classList.add('dragging');
+      startX = e.pageX - container.offsetLeft;
+      scrollLeft = container.scrollLeft;
     });
 
-    grid.style.display = 'none';
-  }
-
-  function isInsideContainer(x, y) {
-    const rect = container.getBoundingClientRect();
-    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
-  }
-
-  function findCubeAt(row, col) {
-    for (let [cube, pos] of meta.entries()) {
-      if (pos.row === row && pos.col === col) return cube;
-    }
-    return null;
-  }
-
-  let active = null;
-
-  function onMouseDown(e) {
-    if (e.button !== 0) return;
-    const el = e.currentTarget;
-    e.preventDefault();
-
-    const startMouseX = e.clientX;
-    const startMouseY = e.clientY;
-    const startLeft = parseFloat(el.style.left) || 0;
-    const startTop  = parseFloat(el.style.top)  || 0;
-
-    active = { el, startMouseX, startMouseY, startLeft, startTop, moved: false };
-    el.style.transition = 'none';
-    el.style.zIndex = 1000;
-    el.classList.add('dragging');
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  }
-
-  let rafId = null;
-  function onMouseMove(e) {
-    if (!active) return;
-    e.preventDefault();
-
-    const dx = e.clientX - active.startMouseX;
-    const dy = e.clientY - active.startMouseY;
-
-    if (!active.moved && (Math.abs(dx) > CLICK_THRESHOLD || Math.abs(dy) > CLICK_THRESHOLD)) {
-      active.moved = true;
-    }
-
-    const desiredLeft = active.startLeft + dx;
-    const desiredTop  = active.startTop + dy;
-
-    if (rafId) cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(() => {
-      active.el.style.left = desiredLeft + 'px';
-      active.el.style.top  = desiredTop + 'px';
+    container.addEventListener('mouseleave', () => {
+      isDown = false;
+      container.classList.remove('dragging');
     });
-  }
 
-  function onMouseUp(e) {
-    if (!active) return;
-    active.el.style.transition = `left ${SNAP_BACK_DURATION}ms ease, top ${SNAP_BACK_DURATION}ms ease`;
+    container.addEventListener('mouseup', () => {
+      isDown = false;
+      container.classList.remove('dragging');
+    });
 
-    const inside = isInsideContainer(e.clientX, e.clientY);
-
-    if (!active.moved) {
-      active.el.classList.remove('dragging');
-      active.el.style.zIndex = '';
-      active = null;
-    } else {
-      if (!inside) {
-        // snap back to original grid position
-        const pos = meta.get(active.el);
-        active.el.style.left = pos.col * cellW + 'px';
-        active.el.style.top  = pos.row * cellH + 'px';
-      } else {
-        // compute nearest grid cell
-        let left = parseFloat(active.el.style.left);
-        let top  = parseFloat(active.el.style.top);
-        let col = Math.round(left / cellW);
-        let row = Math.round(top / cellH);
-
-        // keep inside bounds
-        const maxCols = Math.floor(container.clientWidth / cellW);
-        const maxRows = Math.floor(container.clientHeight / cellH);
-        col = Math.max(0, Math.min(maxCols - 1, col));
-        row = Math.max(0, Math.min(maxRows - 1, row));
-
-        const occupant = findCubeAt(row, col);
-
-        if (occupant && occupant !== active.el) {
-          // swap positions
-          const posActive = meta.get(active.el);
-          const posOther = meta.get(occupant);
-
-          active.el.style.left = col * cellW + 'px';
-          active.el.style.top  = row * cellH + 'px';
-          occupant.style.left  = posActive.col * cellW + 'px';
-          occupant.style.top   = posActive.row * cellH + 'px';
-
-          meta.set(active.el, { row, col });
-          meta.set(occupant, { row: posActive.row, col: posActive.col });
-        } else {
-          // just place into free cell
-          active.el.style.left = col * cellW + 'px';
-          active.el.style.top  = row * cellH + 'px';
-          meta.set(active.el, { row, col });
-        }
-      }
-
-      setTimeout(() => {
-        active.el.classList.remove('dragging');
-        active.el.style.zIndex = '';
-      }, SNAP_BACK_DURATION);
-
-      active = null;
-    }
-
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-  }
-
-  initPositions();
-  cubes.forEach(cube => cube.addEventListener('mousedown', onMouseDown));
-  document.getElementById('container').style.height = '560px';
-  document.getElementById('container').style.width = '620px';
-})();
-</script>
-
-
-
+    container.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - container.offsetLeft;
+      const walk = (x - startX) * 1; // scroll speed
+      container.scrollLeft = scrollLeft - walk;
+    });
+  </script>
 </body>
 </html>
