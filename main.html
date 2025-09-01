@@ -195,11 +195,6 @@
   initPositions();
   cubes.forEach(cube => cube.addEventListener('mousedown', onMouseDown));
 })();
-	cy.get('.items')
-  .trigger('mousedown', { which: 1, pageX: 493, pageY: 391, force: true })
-  .trigger('mousemove', { pageX: 271, pageY: 391, force: true })
-  .trigger('mouseup', { force: true });
-
 </script>
 
 

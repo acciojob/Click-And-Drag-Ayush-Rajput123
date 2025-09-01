@@ -16,8 +16,8 @@
 
     /* Defined area (container) */
     .items {
-      width: calc((var(--cube-size) * var(--cols)) + (var(--gap) * (var(--cols) - 1)) + 40px);
-      height: calc((var(--cube-size) * 5) + (var(--gap) * 4) + 40px); /* 5 rows visible */
+      width: calc((100px * 5) + (12px * (5 - 1)) + 40px);
+      height: calc((100px * 5) + (12px * 4) + 40px); /* 5 rows visible */
       padding: 20px;
       background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
       border-radius: 8px;
@@ -25,7 +25,6 @@
       position: relative; /* children will be absolutely positioned after init */
       overflow: hidden;    /* prevents any visual overflow */
       user-select: none;
-	  force: true
     }
 
     /* initial grid layout used only until JS converts cubes to absolute positions */
