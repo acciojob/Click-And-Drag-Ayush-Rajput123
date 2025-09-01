@@ -16,8 +16,8 @@
 
     /* Defined area (container) */
     .items {
-      width: 620px;  
-      height: 560px; 
+      width: 620px !important;
+      height: 560px !important;
       padding: 20px;
       background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
       border-radius: 8px;
