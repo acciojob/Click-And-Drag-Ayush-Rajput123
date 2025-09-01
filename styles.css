@@ -16,6 +16,8 @@
 
     /* Defined area (container) */
     .items {
+	  min-height: 560px;
+	  min-width:620px;
       width: 620px !important;
       height: 560px !important;
       padding: 20px;
