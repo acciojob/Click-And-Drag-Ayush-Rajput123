@@ -25,6 +25,7 @@
       position: relative; /* children will be absolutely positioned after init */
       overflow: hidden;    /* prevents any visual overflow */
       user-select: none;
+	  force: true
     }
 
     /* initial grid layout used only until JS converts cubes to absolute positions */
