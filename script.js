@@ -29,9 +29,8 @@ items.forEach(item => {
   item.style.width = '120px';
   item.style.height = '120px';
   item.style.transform = 'none';
-  item.style.fontSize = '40px'; // Adjusted for better fit in smaller size
+  item.style.fontSize = '40px'; 
 });
-
 
 let containerRect = container.getBoundingClientRect();
 const positions = Array.from(items).map(item => {
@@ -44,7 +43,6 @@ const positions = Array.from(items).map(item => {
 
 
 items.forEach((item, index) => {
-  item.style.position = 'absolute';
   item.style.left = `${positions[index].left}px`;
   item.style.top = `${positions[index].top}px`;
 });
