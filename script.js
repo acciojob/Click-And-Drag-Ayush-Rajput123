@@ -7,15 +7,8 @@
 .item:nth-child(9n+7) { background: lightcoral;}
 .item:nth-child(9n+8) { background: darkslateblue;}
 .item:nth-child(9n+9) { background: rebeccapurple;}
-
 .item:nth-child(even) { transform: scaleX(1.31) rotateY(40deg); }
 .item:nth-child(odd) { transform: scaleX(1.31) rotateY(-40deg); }
-
-
-
-
-
-
 
 
 const container = document.querySelector('.items');
@@ -26,7 +19,7 @@ container.style.display = 'grid';
 container.style.gridTemplateColumns = 'repeat(5, 120px)';
 container.style.gridTemplateRows = 'repeat(5, 120px)';
 container.style.gap = '0';
-container.style.overflow = 'hidden';
+container.style.overflow = 'auto';
 container.style.whiteSpace = 'normal';
 container.style.alignContent = 'center';
 container.style.justifyContent = 'center';
